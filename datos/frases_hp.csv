@@ -1,0 +1,14 @@
+CODIGO,TIPO,TEXTO_ES,CATEGORIA
+H302,H,Nocivo en caso de ingestión,Salud
+H315,H,Provoca irritación cutánea,Salud
+H318,H,Provoca lesiones oculares graves,Salud
+H319,H,Provoca irritación ocular grave,Salud
+H360FD,H,Puede perjudicar a la fertilidad. Puede dañar al feto,Salud
+H410,H,Muy tóxico para los organismos acuáticos con efectos nocivos duraderos,Ambiental
+P102,P,Mantener fuera del alcance de los niños,General
+P103,P,Leer la etiqueta antes del uso,General
+P261,P,Evitar respirar el polvo,Prevencion
+P264,P,Lavarse concienzudamente tras la manipulación,Prevencion
+P280,P,Llevar guantes/prendas/gafas/máscara de protección,Prevencion
+P305,P,EN CASO DE CONTACTO CON LOS OJOS,Respuesta
+P337,P,Si persiste la irritación ocular,Respuesta
