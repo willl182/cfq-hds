@@ -13,8 +13,10 @@ Planificar, diseñar e implementar un sistema automatizado para generar Hojas de
 - [x] Revisar guía HDS (16 secciones + frases H/P)
 - [x] Crear plan consolidado del sistema (`plan_hds.md`)
 - [x] Aplicar skill saver para seguimiento del proyecto
-
-- [ ] Crear repositorio GitHub
+- [x] Crear guía git_cli.md (guía práctica de GitHub CLI)
+- [x] Reorganizar guía git_cli.md (orden desde cero, salidas completas)
+- [x] Agregar sección master a main en git_cli.md
+- [x] Crear repositorio GitHub
 - [ ] Implementar estructura de archivos
 - [ ] Crear base de datos maestra (Excel)
 - [ ] Desarrollar scripts de generación

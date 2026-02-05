@@ -100,6 +100,25 @@ init.defaultbranch=main
 core.editor=code --wait
 ```
 
+### 2.2 Cambiar de 'master' a 'main' (Opcional)
+
+Si Git creó por defecto una rama llamada `master` y prefieres usar `main` (el estándar actual):
+
+```bash
+# 1. Renombrar la rama local actual de master a main
+git branch -m master main
+
+# 2. Configurar Git para que use 'main' en todos los repositorios nuevos
+git config --global init.defaultBranch main
+```
+
+**Salida esperada**:
+No hay error. Puedes verificar el cambio con:
+```bash
+git branch
+```
+→ Debería mostrar `* main` en lugar de `master`.
+
 ---
 
 ## 3. Crear Llave SSH (ANTES de Autenticarse)
