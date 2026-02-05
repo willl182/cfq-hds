@@ -1,121 +1,282 @@
 # Guía Práctica de GitHub CLI y Git
 
-> Guía para dejar de depender del navegador en operaciones de GitHub usando el comando `gh`
+> Guía completa para dejar de depender del navegador en operaciones de GitHub usando el comando `gh`
 
-## Quickstart: Crear Tu Primer Repositorio
+## 0. Prerrequisitos
 
-Si ya tienes un proyecto con commits y quieres crear el repositorio GitHub **sin abrir el navegador**:
+Antes de empezar, necesitas:
 
-```bash
-# 1. Autenticar con GitHub (primera vez)
-gh auth login --git-protocol ssh
+- Una cuenta en [GitHub.com](https://github.com)
+- Un sistema Linux con terminal
+- Conexión a internet
 
-# 2. Crear repositorio desde directorio actual
-gh repo create cfq-hds --private --source=. --remote=origin --push
+### 0.1 Verificar si ya tienes cuenta
 
-# 3. Verificar que se creó correctamente
-gh repo view
-```
-
-**Resultado**: Tu repositorio ya existe en GitHub con todos los commits locales sincronizados. 🚀
+Ve a [github.com/settings/keys](https://github.com/settings/keys) para verificar si ya tienes llaves SSH configuradas.
 
 ---
 
-## 1. Instalación y Verificación
+## 1. Instalación (Linux/Ubuntu/Debian)
 
-### Verificar si está instalado
+### 1.1 Instalar Git
 
 ```bash
-gh --version
-git --version
+# Actualizar paquetes
+sudo apt update
+
+# Instalar Git
+sudo apt install git
+```
+
+**Salida esperada**:
+```
+git version 2.x.x
+```
+
+### 1.2 Instalar GitHub CLI (gh)
+
+```bash
+# Agregar repositorio de GitHub CLI
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+
+# Configurar repositorio
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list
+
+# Actualizar e instalar
+sudo apt update
+sudo apt install gh
 ```
 
 **Salida esperada**:
 ```
 gh version 2.x.x
-git version 2.x.x
 ```
 
-### Instalación rápida
+### 1.3 Verificar instalación
 
-**Linux (Ubuntu/Debian)**:
 ```bash
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list
-sudo apt update
-sudo apt install gh
-```
+# Verificar versión de Git
+git --version
 
-**macOS (Homebrew)**:
-```bash
-brew install gh
+# Verificar versión de GitHub CLI
+gh --version
 ```
-
-**Windows**:
-- Descargar instalador desde https://cli.github.com/
 
 ---
 
-## 2. Autenticación con GitHub
+## 2. Configuración Inicial de Git (UNA VEZ)
 
-### 2.1 Primer Autenticación (método SSH - Recomendado)
+Solo necesitas hacer esto **la primera vez**. Configura tu nombre y email para los commits.
 
 ```bash
-gh auth login --git-protocol ssh
+# Configurar nombre de usuario para commits
+git config --global user.name "Tu Nombre Apellido"
+
+# Configurar email de usuario para commits
+git config --global user.email "tu-email@dominio.com"
+
+# Configurar editor por defecto (opcional)
+git config --global core.editor "code --wait"
+
+# Configurar rama por defecto (main, no master)
+git config --global init.defaultBranch main
 ```
 
-**Qué sucede**:
-1. Abre el navegador para que autorices la aplicación
-2. GitHub detecta automáticamente tu llave SSH
-3. El token de autenticación se guarda localmente
-4. Git se configura para usar SSH por defecto
+**Salida esperada**:
+No hay error (el comando no muestra nada)
 
-### 2.2 Configuración SSH (una sola vez)
+### 2.1 Verificar configuración
 
-#### Paso 1: Verificar llaves existentes
+```bash
+# Ver toda la configuración
+git config --global --list
+```
+
+**Salida esperada**:
+```
+user.name=Tu Nombre Apellido
+user.email=tu-email@dominio.com
+init.defaultbranch=main
+core.editor=code --wait
+```
+
+---
+
+## 3. Crear Llave SSH (ANTES de Autenticarse)
+
+### 3.1 Verificar si ya tienes llave SSH
 
 ```bash
 ls -la ~/.ssh/
 ```
 
-**Busca**: `id_rsa.pub`, `id_ed25519.pub`, o similar
+**Si existe una llave** (verás algo así):
+```
+drwx------  2 usuario usuario 4096 Feb  3 00:27 .
+-rw-------  1 usuario usuario  411 Feb  3 00:27 id_ed25519
+-rw-r--r--  1 usuario usuario   97 Feb  3 00:27 id_ed25519.pub
+```
+→ Ya tienes llave, salta al paso 3.3
 
-#### Paso 2: Generar llave si no existe
+**Si NO existe** (verás esto):
+```
+ls: cannot access '/home/usuario/.ssh': No such file or directory
+```
+→ Continúa al paso 3.2
+
+### 3.2 Generar nueva llave SSH
 
 ```bash
-# Genera llave Ed25519 (más segura)
-ssh-keygen -t ed25519 -C "tu-email@ejemplo.com"
+# Generar llave Ed25519 (más segura y moderna)
+ssh-keygen -t ed25519 -C "tu-email@dominio.com"
 ```
 
-**Preguntas durante generación**:
-- Guardar en: `/home/w182/.ssh/id_ed25519` (default)
-- Contraseña: puede dejarla vacía (enter en blanco)
+**Interacción completa**:
+```
+Generating public/private ed25519 key pair.
+Enter file in which to save the key (/home/w182/.ssh/id_ed25519): 
+```
+→ Presiona ENTER para usar ubicación por defecto
 
-#### Paso 3: Agregar llave a GitHub
+```
+Enter passphrase (empty for no passphrase):
+```
+→ Escribe una contraseña O presiona ENTER dos veces (o déjalo vacío)
 
-```bash
-# Copia el contenido de tu llave pública
-cat ~/.ssh/id_ed25519.pub
-
-# Método 1: Desde CLI (si tienes la llave en archivo)
-gh ssh-key add ~/.ssh/id_ed25519.pub
-
-# Método 2: Desde GitHub.com (más visual)
-# 1. Ve a https://github.com/settings/keys
-# 2. Click en "New SSH key"
-# 3. Pega el contenido de id_ed25519.pub
+```
+Your identification has been saved in /home/w182/.ssh/id_ed25519
+Your public key has been saved in /home/w182/.ssh/id_ed25519.pub
+The key fingerprint is:
+SHA256:abc123def456... tu-email@dominio.com
+The key's randomart image is:
++--[ED25519 256]--+
+|                 |
+|     E    .      |
+|    + .oo+ o     |
+|     X BS.= o    |
+| . =.*.== =     |
+|.o==.oo..   .    |
+| o=.+.o+o.   +   |
+|.o==.oo..   .    |
++----[SHA256]-----+
 ```
 
-#### Paso 4: Probar conexión
+### 3.3 Verificar que se creó la llave
 
 ```bash
-# Test de conexión a GitHub
+# Verificar archivos creados
+ls ~/.ssh/
+```
+
+**Salida esperada**:
+```
+drwx------  2 usuario usuario Feb  3 00:27 .
+-rw-------  1 usuario usuario Feb  3 00:27 id_ed25519
+-rw-r--r--  1 usuario usuario   97 Feb  3 00:27 id_ed25519.pub
+```
+
+### 3.4 Verificar contenido de la llave pública
+
+```bash
+# Ver la llave pública (solo primera línea)
+head -3 ~/.ssh/id_ed25519.pub
+```
+
+**Salida esperada**:
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... tu-email@dominio.com
+```
+
+---
+
+## 4. Autenticarse con GitHub CLI
+
+### 4.1 Ejecutar el comando de autenticación
+
+```bash
+gh auth login
+```
+
+### 4.2 Elegir host
+
+**Pregunta del CLI**:
+```
+? Where do you use GitHub?  [Use arrows to move, type to filter]
+> GitHub.com
+```
+→ Selecciona `GitHub.com` (si ya está seleccionado, presiona ENTER)
+
+### 4.3 Elegir protocolo
+
+**Pregunta del CLI**:
+```
+? What is your preferred protocol for Git operations on this host?  [Use arrows to move, type to filter]
+> SSH
+```
+→ Selecciona `SSH` con las flechas (↑↓) y presiona ENTER
+
+### 4.4 Subir la llave SSH
+
+**Pregunta del CLI**:
+```
+? Upload your SSH public key to your GitHub account?  [Use arrows to move, type to filter]
+> /home/w182/.ssh/id_ed25519.pub
+  Skip
+```
+→ Selecciona tu archivo `.pub` y presiona ENTER
+
+### 4.5 Dar nombre a la llave
+
+**Pregunta del CLI**:
+```
+? Title for your SSH key? (GitHub CLI)
+```
+→ Escribe un nombre descriptivo: `mi-laptop-linux` o `workstation` o `desktop`
+
+**Nota**: Este nombre es SOLO una etiqueta, NO afecta la seguridad.
+
+### 4.6 Código de autenticación
+
+**Pregunta del CLI**:
+```
+! First copy your one-time code: AB12-CD34
+Press Enter to open github.com in your browser...
+```
+→ Presiona ENTER para abrir el navegador
+
+### 4.7 Autorizar en el navegador
+
+En el navegador que se abre:
+
+1. El código ya debe estar autocompletado
+2. Click en **Authorize**
+3. (Opcional) Escribe una nota: "Linux - generada para GitHub CLI"
+4. Click en **Continue**
+
+### 4.8 Verificar autenticación en la terminal
+
+**De vuelta en la terminal**:
+```
+✓ Authentication complete.
+✓ Configured git protocol to ssh
+✓ Uploaded to SSH key to your GitHub account: /home/w182/.ssh/id_ed25519.pub
+✓ Logged in as tu-usuario
+```
+
+### 4.9 Probar conexión SSH a GitHub
+
+```bash
+# Test de conexión
 ssh -T git@github.com
 ```
 
-**Éxito**: `Hi usuario! You've successfully authenticated, but GitHub does not provide shell access.`
+**Salida esperada**:
+```
+Hi tu-usuario! You've successfully authenticated, but GitHub does not provide shell access.
+Connection to github.com closed by remote host.
+```
 
-### 2.3 Verificar estado de autenticación
+### 4.10 Verificar estado de autenticación
 
 ```bash
 gh auth status
@@ -124,47 +285,46 @@ gh auth status
 **Salida esperada**:
 ```
 github.com
-  Logged in to github.com account tu-usuario (key: SHA256:abcd...)
+  Logged in to github.com account tu-usuario (key: SHA256:abc...)
   - Git protocol: ssh
   - Active account: true
 ```
 
-### 2.4 Reautenticar (si el token expiró)
-
-```bash
-gh auth logout --hostname github.com
-gh auth login --git-protocol ssh
-```
-
 ---
 
-## 3. Operaciones de Repositorios
+## 5. Quickstart: Crear Tu Primer Repositorio
 
-### 3.1 Crear repositorio nuevo (vacío)
+### 5.1 Opción A: Crear repositorio NUEVO (vacío)
+
+Si NO tienes un proyecto:
 
 ```bash
-# Interactivo (te pregunta nombre, tipo, etc.)
-gh repo create
-
-# No interactivo - recomendado para automatización
-gh repo create nombre-repo \
+# Crear repositorio y clonarlo en una sola línea
+gh repo create cfq-hds \
   --private \
-  --description "Descripción del repositorio" \
-  --source=. \           # Usa directorio actual como fuente
-  --remote=origin \       # Nombre del remoto
-  --push                 # Sube commits inmediatamente
+  --description "Sistema de Hojas de Seguridad para fertilizantes Calferquim" \
+  --clone
+
+# Cambiar al directorio del repositorio
+cd cfq-hds
 ```
 
-**Flags útiles**:
-- `--public`: Repositorio público
-- `--license MIT`: Agrega licencia
-- `--gitignore Python`: Agrega .gitignore para Python
+**Salida esperada**:
+```
+✓ Created repository tu-usuario/cfq-hds
+Initialized empty Git repository in /home/w182/cfq_hds/cfq_hds
+remote: Repository URL found at git@github.com:tu-usuario/cfq-hds.git
+```
 
-### 3.2 Crear repositorio desde directorio existente ← TU CASO
+### 5.2 Opción B: Crear repositorio desde DIRECTORIO EXISTENTE ← TU CASO
 
-Cuando ya tienes un proyecto con commits:
+Si ya tienes un proyecto con commits:
 
 ```bash
+# Cambiar al directorio del proyecto
+cd /home/w182/w421/cfq_hds
+
+# Crear repositorio GitHub desde directorio actual
 gh repo create cfq-hds \
   --private \
   --source=. \
@@ -173,124 +333,256 @@ gh repo create cfq-hds \
   --description "Sistema de Hojas de Seguridad para fertilizantes Calferquim"
 ```
 
-**Qué hace cada flag**:
-- `--source=.`: Lee el directorio actual como proyecto
-- `--remote=origin`: Configura `origin` como remoto
-- `--push`: Sube todos los commits existentes inmediatamente
-
-### 3.3 Clonar repositorio existente
-
-```bash
-gh repo clone usuario/nombre-repo
-cd nombre-repo
+**Salida esperada**:
+```
+✓ Created repository tu-usuario/cfq-hds
+Enumerating objects: 24, done.
+Counting objects: 24, done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (24/24), done.
+Writing objects: 100% (24/24), done.
+Total 24 (delta 0), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (24/24), done.
+To github.com:tu-usuario/cfq-hds.git
+ * [new branch]      main -> main
 ```
 
-### 3.4 Listar tus repositorios
+### 5.3 Verificar que se creó correctamente
 
 ```bash
-gh repo list
-```
-
-### 3.5 Ver información de un repositorio
-
-```bash
-# Ver repositorio actual
 gh repo view
+```
 
-# Ver repositorio específico
-gh repo view usuario/otro-repo
+**Salida esperada**:
+```
+name: cfq-hds
+owner: tu-usuario
+visibility: private
+description: Sistema de Hojas de Seguridad para fertilizantes Calferquim
+url: https://github.com/tu-usuario/cfq-hds
+```
+
+### 5.4 Abrir en navegador
+
+```bash
+# Abrir repositorio en el navegador
+gh browse
 ```
 
 ---
 
-## 4. Flujo de Trabajo Diario
+## 6. Flujo de Trabajo Diario
 
-### 4.1 Ciclo básico de commits
+### 6.1 Ciclo básico: add → commit → push
+
+#### Agregar archivos al área de staging
 
 ```bash
-# 1. Agregar archivos al área de staging
-git add archivo1.py archivo2.md
+# Agregar un archivo específico
+git add archivo.py
 
-# 2. Crear commit con mensaje claro
+# Agregar todos los archivos modificados
+git add .
+
+# Agregar archivos con patrón
+git add *.py
+```
+
+#### Crear commit con mensaje claro
+
+```bash
+# Commit básico
 git commit -m "Agregar scripts de generación HDS"
 
-# 3. Subir cambios a GitHub
-git push origin main
-```
-
-**Mejor práctica**: Mensajes de commit con formato
-
-```bash
-# ✅ Bueno - Describe qué y por qué
+# Commit con mensaje estructurado (recomendado)
 git commit -m "feat: agregar motor de combinación GHS para mezclas"
 
-# ❌ Malo - No explica nada
-git commit -m "actualizar archivos"
+# Commit con descripción detallada
+git commit -m "fix: resolver error en validación de pictogramas
+
+Esta implementación corrige el problema donde se duplicaban pictogramas
+cuando se combinaban más de 5 componentes en mezclas.
+
+Closes #15"
 ```
 
-### 4.2 Ver estado y cambios
+**Formato de commit recomendado**:
+- `feat:` para nueva funcionalidad
+- `fix:` para corrección de bug
+- `docs:` para documentación
+- `refactor:` para reorganización de código
+- `test:` para pruebas
+
+#### Subir cambios a GitHub
+
+```bash
+# Subir la rama actual
+git push origin main
+
+# Subir rama específica
+git push origin feature/generacion-pdfs
+```
+
+**Salida esperada**:
+```
+Enumerating objects: 5, done.
+Counting objects: 5, done.
+Delta compression using up to 8 threads.
+Writing objects: 100% (5/5), done.
+Total 5 (delta 3), reused 0 (delta 0), pack-reused 0
+To github.com:tu-usuario/cfq-hds.git
+   abc123d..def4567  main -> main
+```
+
+### 6.2 Ver estado y cambios
 
 ```bash
 # Estado del directorio de trabajo
 git status
-
-# Ver qué cambió entre commits
-git diff HEAD~1
-git diff origin/main  # Comparar con remoto
 ```
 
-### 4.3 Sincronizar con remoto
+**Salida esperada**:
+```
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  modified:   scripts/generar_hds.py
+```
+
+```bash
+# Ver qué cambió entre commits
+git diff HEAD~1
+
+# Comparar con remoto
+git diff origin/main
+```
+
+### 6.3 Sincronizar con remoto
 
 ```bash
 # Traer cambios del remoto
 git pull origin main
-
-# Traer sin fusionar (revisar primero)
-git fetch origin
-git log origin/main  # Ver commits remotos
 ```
 
-### 4.4 Crear y cambiar de rama
+**Salida esperada**:
+```
+Already up to date.
+
+On branch main
+Your branch is up to date with 'origin/main'.
+```
 
 ```bash
-# Crear nueva rama
-git checkout -b feature/generacion-pdfs
+# Traer sin fusionar (revisar primero)
+git fetch origin
 
-# Cambiar a rama existente
+# Ver commits remotos
+git log origin/main
+```
+
+### 6.4 Crear y cambiar de rama
+
+#### Crear nueva rama
+
+```bash
+# Crear rama nueva desde la actual
+git checkout -b feature/generacion-pdfs
+```
+
+**Salida esperada**:
+```
+Switched to a new branch 'feature/generacion-pdfs'
+```
+
+#### Cambiar a rama existente
+
+```bash
+# Cambiar a rama develop
 git checkout develop
 
-# Listar todas las ramas
+# Volver a rama anterior
+git checkout -
+```
+
+#### Listar todas las ramas
+
+```bash
+# Listar ramas locales
+git branch
+
+# Listar ramas locales y remotas
 git branch -a
 ```
 
-### 4.5 Fusionar ramas (merge)
+**Salida esperada**:
+```
+  feature/generacion-pdfs
+* main
+  remotes/origin/develop
+```
+
+### 6.5 Fusionar ramas (merge)
+
+#### Fusionar feature en main
 
 ```bash
 # Cambiar a rama destino (main)
 git checkout main
 
-# Fusionar feature en main
+# Fusionar feature
 git merge feature/generacion-pdfs
+```
 
-# Subir resultado
+**Salida esperada**:
+```
+Updating abc1234..def5678
+Fast-forward
+  scripts/combinar_peligros.py | 2 +-
+  scripts/utils.py                | 4 +-
+ create mode 100644 output/hds/pt001.docx
+```
+
+#### Subir resultado
+
+```bash
 git push origin main
 ```
 
-### 4.6 Historial de commits
+### 6.6 Historial de commits
 
 ```bash
-# Ver últimos 10 commits
+# Ver últimos 10 commits en una línea
 git log --oneline -10
+```
 
+**Salida esperada**:
+```
+abc123d (HEAD -> main) feat: agregar motor de combinación GHS
+def4567 (HEAD~1) docs: actualizar plan_hds.md
+ghi7890 (HEAD~2) feat: implementar estructura de directorios
+jkl0123 (HEAD~3) init: commit inicial
+```
+
+```bash
 # Ver con gráfico
 git log --graph --oneline -10
 ```
 
+**Salida esperada**:
+```
+* abc123d (HEAD -> main) feat: agregar motor de combinación GHS
+* def4567 (HEAD~1) docs: actualizar plan_hds.md
+* ghi7890 (HEAD~2) feat: implementar estructura de directorios
+| * jkl0123 (HEAD~3) init: commit inicial
+```
+
 ---
 
-## 5. Git Worktrees (Trabajo en Paralelo)
+## 7. Git Worktrees (Trabajo en Paralelo)
 
-### 5.1 ¿Qué son y cuándo usarlos?
+### 7.1 ¿Qué son y cuándo usarlos
 
 Un **worktree** permite tener múltiples copias del mismo repositorio en diferentes directorios, cada una en una rama diferente.
 
@@ -299,82 +591,96 @@ Un **worktree** permite tener múltiples copias del mismo repositorio en diferen
 - Revisar una rama antigua sin perder tu trabajo actual
 - Tener múltiples versiones desplegadas en paralelo
 
-### 5.2 Crear worktree para otra rama
+### 7.2 Crear worktree para otra rama
+
+**Escenario**: Estás en `/home/w182/w421/cfq_hds` (rama `main`) y necesitas hacer un hotfix en rama `hotfix/bug-1`.
 
 ```bash
-# Escenario: Trabajas en feature/hds-system y llega un bug en producción
-
-# Crear worktree para hotfix (se crea en directorio ../cfq_hds-hotfix)
-git worktree add ../cfq_hds-hotfix main
-
-# Cambiar al worktree
-cd ../cfq_hds-hotfix
-
-# Arreglar bug, hacer commit, push
-git commit -m "fix: resolver error en validación de pictogramas"
-git push origin main
-
-# Regresar al directorio original
-cd ../cfq_hds
+# Crear worktree para el hotfix (se crea en directorio superior)
+git worktree add ../cfq_hds-hotfix hotfix/bug-1
 ```
 
-### 5.3 Listar worktrees activos
+**Salida esperada**:
+```
+Preparing worktree (new branch 'hotfix/bug-1')
+HEAD is now at abc123d
+Preparing worktree (checking out branch 'hotfix/bug-1')
+/path/to/cfq_hds-hotfix .git/objects
+```
+
+```bash
+# Cambiar al directorio del worktree
+cd ../cfq_hds-hotfix
+
+# Trabajo en hotfix...
+git commit -m "fix: resolver error crítico en validación"
+git push origin hotfix/bug-1
+```
+
+### 7.3 Listar worktrees activos
 
 ```bash
 git worktree list
 ```
 
-**Salida**:
+**Salida esperada**:
 ```
-/path/to/cfq_hds-hotfix  abc1234 [main]
+/path/to/cfq_hds-hotfix            abc1234 [hotfix/bug-1]
+/home/w182/w421/cfq_hds             def5678 [main]
 ```
 
-### 5.4 Eliminar worktree cuando termines
+### 7.4 Eliminar worktree cuando termines
 
 ```bash
-# Primero asegurarte de estar fuera del worktree
-cd /path/to/cfq_hds
+# Primero asegurarte de estar FUERA del worktree
+cd /home/w182/w421/cfq_hds
 
 # Eliminar worktree
 git worktree remove /path/to/cfq_hds-hotfix
 ```
 
+**Salida esperada**:
+```
+Deleted worktree at /path/to/cfq_hds-hotfix (clean)
+```
+
 ⚠️ **No elimines el directorio manualmente**: el comando también lo borra del sistema git.
 
-### 5.5 Caso práctico desde OpenCode
+### 7.5 Caso práctico desde OpenCode
 
-Si estás trabajando en `/home/w182/w421/cfq_hds` (rama `feature/hds`):
+Si estás trabajando en `/home/w182/w421/cfq_hds` (rama `main`):
 
 ```bash
-# Necesitas crear un hotfix en rama `main`
-git worktree add ../cfq_hds-hotfix main
+# Necesitas crear un hotfix en rama `hotfix/bug-1`
+git worktree add ../cfq_hds-hotfix hotfix/bug-1
 
-# Cambia al hotfix, arreglar, commitear
+# Cambiar al hotfix, arreglar, commitear
 cd ../cfq_hds-hotfix
-# ... trabajo en hotfix ...
-git push origin main
+git commit -m "fix: resolver error urgente"
+git push origin hotfix/bug-1
 
 # Vuelve a tu trabajo original sin cambios perdidos
 cd ../cfq_hds
 git worktree remove ../cfq_hds-hotfix
-# Ahora sigues en feature/hds donde lo dejaste
+# Ahora sigues en main donde lo dejaste
 ```
 
 ---
 
-## 6. Issues desde CLI
+## 8. Issues desde CLI
 
-### 6.1 Crear un issue
+### 8.1 Crear un issue
 
 ```bash
-# Básico - te pide título y cuerpo
-gh issue create
+# Crear issue básico
+gh issue create "Título del issue"
 
-# Con flags (recomendado)
+# Crear issue con cuerpo detallado (recomendado)
 gh issue create "Error en combinación de pictogramas" \
   --body "### Descripción
 
-Al generar HDS para mezclas con más de 5 componentes, se duplican pictogramas.
+Al generar HDS para mezclas con más de 5 componentes,
+se duplican pictogramas.
 
 ### Pasos para reproducir
 1. Crear receta con 6 componentes
@@ -390,15 +696,10 @@ Al generar HDS para mezclas con más de 5 componentes, se duplican pictogramas.
   --repo cfq-hds
 ```
 
-**Flags útiles**:
-- `--label`: Agrega etiquetas (bug, enhancement, documentation)
-- `--assignee`: Asigna a alguien
-- `--web`: Abre el issue en el navegador después de crearlo
-
-### 6.2 Listar issues
+### 8.2 Listar issues
 
 ```bash
-# Ver todos los issues
+# Ver todos los issues del repositorio
 gh issue list
 
 # Ver issues abiertos
@@ -408,40 +709,47 @@ gh issue list --state open
 gh issue list --state closed --limit 10
 ```
 
-### 6.3 Ver issue específico
+**Salida esperada**:
+```
+#42  fix: Error en combinación de pictogramas  open   2 days ago
+#43  docs: Actualizar README.md                  open   5 days ago
+#44  feature: Agregar soporte para PDF          open   1 week ago
+```
+
+### 8.3 Ver issue específico
 
 ```bash
-# Por número
+# Ver issue por número
 gh issue view 42
 
-# Por título
+# Ver issue por título
 gh issue view --repo cfq-hds "Error en combinación"
 ```
 
-### 6.4 Cerrar issue
+### 8.4 Cerrar issue
 
 ```bash
-# Con número
-gh issue close 42 --comment "Solucionado en commit abc123"
+# Cerrar issue con comentario
+gh issue close 42 --comment "Solucionado en commit abc1234"
 
-# Con referencia
+# Cerrar issue con referencia a commit
 gh issue close --comment "Implementado en #45"
 ```
 
 ---
 
-## 7. Pull Requests desde CLI
+## 9. Pull Requests desde CLI
 
-### 7.1 Crear un Pull Request
+### 9.1 Crear un Pull Request
 
 ```bash
-# Estás en rama feature/generacion-pdfs y quieres fusinar en main
-
+# Estás en rama feature/generacion-pdfs y quieres fusionar en main
 gh pr create \
   --title "Agregar generación de PDFs" \
   --body "### Cambios
 
-Esta PR agrega funcionalidad para convertir Markdown a PDF directamente desde el script.
+Esta PR agrega funcionalidad para convertir Markdown a PDF
+directamente desde el script.
 
 ### Testing
 - Probado con 3 productos terminados
@@ -459,7 +767,7 @@ Esta PR agrega funcionalidad para convertir Markdown a PDF directamente desde el
 - `--base main`: Rama donde se fusionará (destino)
 - `--head feature/...`: Tu rama actual (origen)
 
-### 7.2 Listar Pull Requests
+### 9.2 Listar Pull Requests
 
 ```bash
 # Ver todas las PRs
@@ -472,28 +780,39 @@ gh pr list --state open
 gh pr list --repo cfq-hds
 ```
 
-### 7.3 Ver detalles de una PR
+**Salida esperada**:
+```
+#15  fix: Resolver conflicto en merge            open   3 days ago
+#16  feature: Agregar soporte para Etiquetas    merged  1 week ago
+```
+
+### 9.3 Ver detalles de una PR
 
 ```bash
-# Por número
+# Ver PR por número
 gh pr view 15
 
-# Ver archivos cambiados
+# Ver archivos cambiados en la PR
 gh pr diff 15
 
 # Ver estado (checks, revisiones)
 gh pr checks 15
 ```
 
-### 7.4 Fusionar una PR (desde CLI)
+### 9.4 Fusionar una PR (desde CLI)
 
 ```bash
 gh pr merge 15 --merge --delete-branch
 ```
 
+**Salida esperada**:
+```
+Pull request #15 merged!
+```
+
 **Resultado**: La rama se fusiona y se borra automáticamente con `--delete-branch`.
 
-### 7.5 Revisar cambios de una PR
+### 9.5 Revisar cambios de una PR
 
 ```bash
 # Cambiar al trabajo de la PR
@@ -505,9 +824,9 @@ git checkout main
 
 ---
 
-## 8. Comandos Útiles
+## 10. Comandos Útiles
 
-### 8.1 Abrir en navegador
+### 10.1 Abrir en navegador
 
 ```bash
 # Abrir repositorio actual
@@ -520,17 +839,17 @@ gh browse --repo cfq-hds issues/42
 gh browse --repo cfq-hds pull/15
 ```
 
-### 8.2 Crear gists (fragmentos de código rápidos)
+### 10.2 Crear gists (fragmentos de código rápidos)
 
 ```bash
 # Desde archivo
 gh gist create script.py --desc "Script de combinación GHS"
 
 # Desde texto inline
-echo "print('Hola')" | gh gist create
+echo "print('Hola Mundo')" | gh gist create
 ```
 
-### 8.3 Crear alias (atajos)
+### 10.3 Crear alias (atajos)
 
 ```bash
 # Crear alias para comando frecuente
@@ -540,13 +859,13 @@ gh alias set sync='git pull origin main && git push origin main'
 gh sync
 ```
 
-### 8.4 Ver repositorio en formato web
+### 10.4 Ver repositorio en formato web
 
 ```bash
 gh repo view --web
 ```
 
-### 8.5 Buscar repositorios
+### 10.5 Buscar repositorios
 
 ```bash
 # Buscar por nombre
@@ -561,19 +880,19 @@ gh search topics:fertilizantes
 
 ---
 
-## 9. Cheatsheet (Referencia Rápida)
+## 11. Cheatsheet (Referencia Rápida)
 
 | Acción | Comando | Ejemplo |
 |---------|---------|---------|
 | **Autenticación** |
-| Ver estado | `gh auth status` | Verificas que estás logueado |
+| Ver estado | `gh auth status` | Verificar autenticación |
 | Login | `gh auth login` | Primera vez |
 | Logout | `gh auth logout` | Cerrar sesión |
 | **Repositorios** |
 | Crear (vacío) | `gh repo create nombre-repo` | Nuevo proyecto |
 | Crear (existente) | `gh repo create --source=. --push` | Tu caso actual |
 | Clonar | `gh repo clone usuario/repo` | Copiar a local |
-| Listar | `gh repo list` | Ver todos los tuyos |
+| Listar | `gh repo list` | Ver tus repos |
 | Ver info | `gh repo view` | Detalles del repo |
 | **Flujo Git** |
 | Estado | `git status` | Cambios pendientes |
@@ -582,20 +901,25 @@ gh search topics:fertilizantes
 | Subir | `git push origin main` | Sincronizar |
 | Traer | `git pull origin main` | Actualizar local |
 | Diferencias | `git diff` | Ver cambios |
+| Branches | `git branch` | Listar ramas |
+| New branch | `git checkout -b rama` | Crear rama |
+| Checkout | `git checkout rama` | Cambiar rama |
+| Merge | `git merge rama` | Fusionar ramas |
+| Log | `git log --oneline` | Ver historial |
 | **Worktrees** |
-| Crear | `git worktree add ../nombre rama` | Hotfix paralelo |
-| Listar | `git worktree list` | Ver activos |
-| Eliminar | `git worktree remove ruta` | Limpiar |
+| Crear | `git worktree add ../path rama` | Hotfix paralelo |
+| Listar | `git worktree list` | Ver worktrees activos |
+| Eliminar | `git worktree remove path` | Limpiar worktree |
 | **Issues** |
-| Crear | `gh issue create "Título" --body "Desc"` | Reportar bug |
+| Crear | `gh issue create "Título"` | Reportar bug |
 | Listar | `gh issue list` | Ver issues |
 | Ver | `gh issue view 42` | Detalles |
-| Cerrar | `gh issue close 42` | Resolver |
+| Cerrar | `gh issue close 42` | Resolver issue |
 | **Pull Requests** |
 | Crear | `gh pr create --base main` | Proponer cambios |
 | Listar | `gh pr list` | Ver PRs |
 | Ver | `gh pr view 15` | Detalles |
-| Fusionar | `gh pr merge 15` | Aprobar |
+| Merge | `gh pr merge 15` | Aprobar PR |
 | **Útiles** |
 | Abrir | `gh browse` | Navegador |
 | Gist | `gh gist create archivo.py` | Compartir código |
@@ -603,22 +927,27 @@ gh search topics:fertilizantes
 
 ---
 
-## 10. Solución de Problemas Comunes
+## 12. Solución de Problemas Comunes
 
-### 10.1 Token inválido o expirado
+### 12.1 Token inválido o expirado
 
 **Error**:
 ```
 The token in default is invalid.
+- To re-authenticate, run: gh auth login -h github.com
+- To forget about this account, run: gh auth logout -h github.com -u willl182
 ```
 
 **Solución**:
 ```bash
+# Cerrar sesión existente
 gh auth logout
-gh auth login --git-protocol ssh
+
+# Autenticar de nuevo
+gh auth login
 ```
 
-### 10.2 Permission denied (SSH)
+### 12.2 Permission denied (SSH)
 
 **Error**:
 ```
@@ -632,31 +961,36 @@ Permission denied (publickey).
 
 **Solución**:
 ```bash
-# 1. Verificar llave usada
-ssh-add -l  # Lista llaves cargadas en el agente
+# 1. Verificar llave usada por el agente
+ssh-add -l
 
-# 2. Re-agregar llave a GitHub (si no aparece en GitHub.com/settings/keys)
+# 2. Verificar llaves existentes en ~/.ssh/
+ls -la ~/.ssh/
+
+# 3. Re-agregar llave a GitHub (si no aparece en GitHub.com/settings/keys)
 gh ssh-key add ~/.ssh/id_ed25519.pub
 ```
 
-### 10.3 Conflictos de merge
+### 12.3 Conflictos de merge
 
-**Error al hacer `git pull`:
+**Error al hacer `git pull`**:
 ```
 CONFLICT (content): Merge conflict in archivo.py
+Auto-merging; failed; Automatic merge failed; fix conflicts and then commit the result.
 ```
 
 **Solución**:
 1. Abre el archivo con conflictos (busca `<<<<<<<` y `>>>>>>>`)
 2. Resuelve manualmente las diferencias
 3. Marca como resuelto:
+
 ```bash
 git add archivo.py
 git commit -m "resolve: conflicto de merge en archivo.py"
 git push origin main
 ```
 
-### 10.4 Worktree bloqueado
+### 12.4 Worktree bloqueado
 
 **Error**:
 ```
@@ -672,9 +1006,9 @@ git worktree unlock /path/to/worktree --reason "hotfix urgente"
 git worktree remove /path/to/worktree
 ```
 
-### 10.5 Rama ya existe en remoto
+### 12.5 Rama ya existe en remoto
 
-**Error al hacer `git push`:
+**Error al hacer `git push`**:
 ```
 ! [rejected] main -> main (fetch first)
 ```
@@ -694,14 +1028,21 @@ Solo necesitas hacer esto **una vez**:
 
 ```bash
 # Configurar nombre y email (obligatorio para commits)
-git config --global user.name "Tu Nombre"
+git config --global user.name "Tu Nombre Apellido"
 git config --global user.email "tu-email@dominio.com"
 
-# Configurar editor por defecto
+# Configurar editor por defecto (opcional)
 git config --global core.editor "code --wait"
 
-# Configurar ramificación por defecto
+# Configurar ramificación por defecto (main, no master)
 git config --global init.defaultBranch main
+```
+
+### Verificar configuración
+
+```bash
+# Ver toda la configuración global
+git config --global --list
 ```
 
 ---
@@ -714,6 +1055,6 @@ git config --global init.defaultBranch main
 
 ---
 
-**Versión de la guía**: 1.0
+**Versión de la guía**: 2.0
 **Última actualización**: 2026-02-04
 **Compatible con**: GitHub CLI 2.x+, Git 2.x+
