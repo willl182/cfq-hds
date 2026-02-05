@@ -1,0 +1,4 @@
+output/hds/*.md
+output/*.json
+output/*.csv
+scripts/__pycache__/
